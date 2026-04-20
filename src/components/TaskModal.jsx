@@ -4,6 +4,7 @@ import { useTasks } from '../context/TaskContext'
 const STATUSES = ['todo', 'in_progress', 'done', 'blocked']
 const PRIORITIES = ['high', 'medium', 'low']
 const REMINDERS = ['none', '1d', '2h', '30m', 'ondue']
+const RECURRING = ['none', 'daily', 'weekly', 'monthly']
 
 export default function TaskModal({ task, onClose, events = [] }) {
   const { addTask, updateTask } = useTasks()
@@ -18,6 +19,7 @@ export default function TaskModal({ task, onClose, events = [] }) {
     assignee: task?.assignee ?? '',
     assignee_tg: task?.assignee_tg ?? '',
     reminder: task?.reminder ?? 'none',
+    recurring: task?.recurring ?? 'none',
   })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -30,7 +32,10 @@ export default function TaskModal({ task, onClose, events = [] }) {
     try {
       setSaving(true)
       if (isEdit) {
-        await updateTask(task.id, { ...form, reminder_sent: form.reminder !== task.reminder ? 'FALSE' : task.reminder_sent })
+        await updateTask(task.id, { 
+          ...form, 
+          reminder_sent: (form.reminder !== task.reminder || form.due_date !== task.due_date) ? 'FALSE' : task.reminder_sent 
+        })
       } else {
         await addTask(form)
       }
@@ -43,8 +48,8 @@ export default function TaskModal({ task, onClose, events = [] }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 sticky top-0 bg-white z-10">
           <h2 className="font-semibold text-slate-800">{isEdit ? 'Edit Task' : 'New Task'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
         </div>
@@ -95,7 +100,7 @@ export default function TaskModal({ task, onClose, events = [] }) {
                 onChange={e => set('priority', e.target.value)}
                 className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                {PRIORITIES.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
               </select>
             </label>
           </div>
@@ -122,6 +127,17 @@ export default function TaskModal({ task, onClose, events = [] }) {
               </select>
             </label>
           </div>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-600">Recurrence</span>
+            <select
+              value={form.recurring}
+              onChange={e => set('recurring', e.target.value)}
+              className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              {RECURRING.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+            </select>
+          </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">

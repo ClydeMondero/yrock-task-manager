@@ -5,7 +5,7 @@ from google.oauth2.service_account import Credentials
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 SHEET_NAME = 'Tasks'
-COLUMNS = ['id', 'name', 'event', 'status', 'priority', 'due_date', 'assignee', 'assignee_tg', 'reminder', 'reminder_sent']
+COLUMNS = ['id', 'name', 'event', 'status', 'priority', 'due_date', 'assignee', 'assignee_tg', 'reminder', 'reminder_sent', 'recurring']
 
 def get_client():
     creds_json = os.environ['GOOGLE_CREDENTIALS_JSON']
@@ -34,11 +34,21 @@ def mark_reminder_sent(task_id: str):
             return
 
 def update_task_status(task_id: str, new_status: str):
+    return update_task_fields(task_id, {"status": new_status})
+
+def update_task_fields(task_id: str, fields: dict):
+    """Update multiple fields for a task at once."""
     sheet = get_sheet()
     all_vals = sheet.get_all_values()
     for i, row in enumerate(all_vals[1:], start=2):
         if row[0] == task_id:
-            status_col = COLUMNS.index('status') + 1
-            sheet.update_cell(i, status_col, new_status)
-            return True
+            cells_to_update = []
+            for field, value in fields.items():
+                if field in COLUMNS:
+                    col_idx = COLUMNS.index(field) + 1
+                    cells_to_update.append(gspread.cell.Cell(row=i, col=col_idx, value=value))
+            
+            if cells_to_update:
+                sheet.update_cells(cells_to_update)
+                return True
     return False
