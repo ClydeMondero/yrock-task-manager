@@ -84,9 +84,30 @@ function taskToRow(task) {
 }
 
 export async function getTasks() {
-  const data = await sheetsRequest('GET', `/values/${SHEET_NAME}!A2:J`)
+  const data = await sheetsRequest('GET', `/values/${SHEET_NAME}!A2:K`)
   const rows = data.values ?? []
   return rows.map((row, i) => rowToTask(row, i)).filter(t => t.id)
+}
+
+export async function getAssignees() {
+  try {
+    const data = await sheetsRequest('GET', `/values/Assignees!A2:C`)
+    const rows = data.values ?? []
+    return rows.map(row => ({
+      id: row[0],
+      name: row[1],
+      telegram_id: row[2]
+    })).filter(a => a.id)
+  } catch (e) {
+    console.error("Failed to fetch assignees", e)
+    return []
+  }
+}
+
+export async function addAssignee(person) {
+  await sheetsRequest('POST', `/values/Assignees!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    values: [[person.id, person.name, person.telegram_id]],
+  })
 }
 
 export async function addTask(task) {

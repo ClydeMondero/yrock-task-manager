@@ -4,12 +4,14 @@ import ListView from './components/ListView'
 import KanbanView from './components/KanbanView'
 import CalendarView from './components/CalendarView'
 import TaskModal from './components/TaskModal'
+import AssigneeModal from './components/AssigneeModal'
 
 const VIEWS = ['List', 'Kanban', 'Calendar']
 
 export default function App() {
   const [view, setView] = useState('List')
   const [modalOpen, setModalOpen] = useState(false)
+  const [assigneeModalOpen, setAssigneeModalOpen] = useState(false)
   const [editTask, setEditTask] = useState(null)
   const [filterEvent, setFilterEvent] = useState('')
   const { tasks, loading, error } = useTasks()
@@ -42,15 +44,6 @@ export default function App() {
               <option value="">All events</option>
               {events.map(ev => <option key={ev} value={ev}>{ev}</option>)}
             </select>
-            {filterEvent && (
-              <button
-                onClick={() => setFilterEvent('')}
-                className="text-xs text-blue-200 hover:text-white"
-                title="Clear filter"
-              >
-                ✕
-              </button>
-            )}
           </div>
 
           <nav className="flex gap-1">
@@ -65,12 +58,21 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <button
-            onClick={openAdd}
-            className="bg-white hover:bg-blue-50 text-blue-600 text-sm font-medium px-4 py-1.5 rounded transition-colors"
-          >
-            + Add Task
-          </button>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAssigneeModalOpen(true)}
+              className="bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-1.5 rounded transition-colors border border-blue-500"
+            >
+              Assignees
+            </button>
+            <button
+              onClick={openAdd}
+              className="bg-white hover:bg-blue-50 text-blue-600 text-sm font-medium px-4 py-1.5 rounded transition-colors"
+            >
+              + Add Task
+            </button>
+          </div>
         </div>
       </header>
 
@@ -79,6 +81,7 @@ export default function App() {
           <span className="text-xs text-blue-600 font-medium">Event:</span>
           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{filterEvent}</span>
           <span className="text-xs text-blue-400">— {filtered.length} task{filtered.length !== 1 ? 's' : ''}</span>
+          <button onClick={() => setFilterEvent('')} className="ml-auto text-[10px] text-blue-400 hover:text-blue-600 uppercase font-bold tracking-wider">Clear Filter</button>
         </div>
       )}
 
@@ -95,6 +98,7 @@ export default function App() {
       </main>
 
       {modalOpen && <TaskModal task={editTask} onClose={closeModal} events={events} />}
+      {assigneeModalOpen && <AssigneeModal onClose={() => setAssigneeModalOpen(false)} />}
     </div>
   )
 }

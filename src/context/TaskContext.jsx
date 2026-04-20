@@ -6,14 +6,19 @@ const TaskContext = createContext(null)
 
 export function TaskProvider({ children }) {
   const [tasks, setTasks] = useState([])
+  const [assignees, setAssignees] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const refresh = useCallback(async () => {
     try {
       setLoading(true)
-      const data = await sheets.getTasks()
-      setTasks(data)
+      const [taskData, assigneeData] = await Promise.all([
+        sheets.getTasks(),
+        sheets.getAssignees()
+      ])
+      setTasks(taskData)
+      setAssignees(assigneeData)
       setError(null)
     } catch (e) {
       setError(e.message)
@@ -30,6 +35,12 @@ export function TaskProvider({ children }) {
     setTasks(prev => [...prev, task])
   }, [])
 
+  const addAssignee = useCallback(async (fields) => {
+    const person = { ...fields, id: uuidv4() }
+    await sheets.addAssignee(person)
+    setAssignees(prev => [...prev, person])
+  }, [])
+
   const updateTask = useCallback(async (id, fields) => {
     await sheets.updateTask(id, fields)
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...fields } : t))
@@ -41,7 +52,7 @@ export function TaskProvider({ children }) {
   }, [])
 
   return (
-    <TaskContext.Provider value={{ tasks, loading, error, addTask, updateTask, deleteTask, refresh }}>
+    <TaskContext.Provider value={{ tasks, assignees, loading, error, addTask, updateTask, deleteTask, addAssignee, refresh }}>
       {children}
     </TaskContext.Provider>
   )
