@@ -32,3 +32,13 @@ def mark_reminder_sent(task_id: str):
             reminder_sent_col = COLUMNS.index('reminder_sent') + 1
             sheet.update_cell(i, reminder_sent_col, 'TRUE')
             return
+
+def update_task_status(task_id: str, new_status: str):
+    sheet = get_sheet()
+    all_vals = sheet.get_all_values()
+    for i, row in enumerate(all_vals[1:], start=2):
+        if row[0] == task_id:
+            status_col = COLUMNS.index('status') + 1
+            sheet.update_cell(i, status_col, new_status)
+            return True
+    return False

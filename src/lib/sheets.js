@@ -90,7 +90,7 @@ export async function getTasks() {
 }
 
 export async function addTask(task) {
-  await sheetsRequest('POST', `/values/${SHEET_NAME}!A:J:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+  await sheetsRequest('POST', `/values/${SHEET_NAME}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
     values: [taskToRow(task)],
   })
 }
