@@ -2,7 +2,7 @@ const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID
 const CLIENT_EMAIL = import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_EMAIL
 const PRIVATE_KEY_PEM = import.meta.env.VITE_GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
 const SHEET_NAME = 'Tasks'
-const COLUMNS = ['id', 'name', 'event', 'status', 'priority', 'due_date', 'assignee', 'assignee_tg', 'reminder', 'reminder_sent', 'recurring']
+const COLUMNS = ['id', 'name', 'event', 'status', 'priority', 'due_date', 'assignee', 'assignee_tg', 'reminder', 'reminder_sent', 'recurring', 'remarks', 'gdrive_link']
 const SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
 
 let _tokenCache = null
@@ -104,9 +104,29 @@ export async function getAssignees() {
   }
 }
 
+export async function getEvents() {
+  try {
+    const data = await sheetsRequest('GET', `/values/Events!A2:B`)
+    const rows = data.values ?? []
+    return rows.map(row => ({
+      id: row[0],
+      name: row[1]
+    })).filter(e => e.id)
+  } catch (e) {
+    console.error("Failed to fetch events", e)
+    return []
+  }
+}
+
 export async function addAssignee(person) {
   await sheetsRequest('POST', `/values/Assignees!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
     values: [[person.id, person.name, person.telegram_id]],
+  })
+}
+
+export async function addEvent(event) {
+  await sheetsRequest('POST', `/values/Events!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    values: [[event.id, event.name]],
   })
 }
 

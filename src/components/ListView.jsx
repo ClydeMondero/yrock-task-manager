@@ -10,7 +10,8 @@ const COLS = [
   { key: 'priority', label: 'Priority' },
   { key: 'due_date', label: 'Due Date' },
   { key: 'assignee', label: 'Assignee' },
-  { key: 'reminder', label: 'Reminder' },
+  { key: 'gdrive_link', label: 'GDrive' },
+  { key: 'remarks', label: 'Remarks' },
 ]
 
 export default function ListView({ tasks, onEdit }) {
@@ -37,70 +38,90 @@ export default function ListView({ tasks, onEdit }) {
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            {COLS.map(col => (
-              <th
-                key={col.key}
-                onClick={() => toggleSort(col.key)}
-                className="text-left px-4 py-3 font-medium text-slate-600 cursor-pointer hover:text-slate-900 select-none"
-              >
-                {col.label}
-                {sortKey === col.key && (
-                  <span className="ml-1 text-blue-500">{sortDir === 'asc' ? '↑' : '↓'}</span>
-                )}
-              </th>
-            ))}
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(task => (
-            <tr
-              key={task.id}
-              className={`border-b border-slate-100 hover:bg-slate-50 transition-colors
-                ${isOverdue(task) ? 'bg-red-50 hover:bg-red-100' : ''}`}
-            >
-              <td className="px-4 py-3 font-medium text-slate-800">
-                {isOverdue(task) && <span className="text-red-500 mr-1">!</span>}
-                {task.name}
-              </td>
-              <td className="px-4 py-3">
-                {task.event
-                  ? <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 font-medium">{task.event}</span>
-                  : <span className="text-slate-300">—</span>}
-              </td>
-              <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
-              <td className="px-4 py-3"><PriorityBadge priority={task.priority} /></td>
-              <td className={`px-4 py-3 ${isOverdue(task) ? 'text-red-600 font-medium' : 'text-slate-600'}`}>
-                {task.due_date || '—'}
-              </td>
-              <td className="px-4 py-3 text-slate-600">{task.assignee || '—'}</td>
-              <td className="px-4 py-3 text-slate-500 capitalize">{task.reminder || 'none'}</td>
-              <td className="px-4 py-3">
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => onEdit(task)}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => deleteTask(task.id)}
-                    className="text-red-500 hover:text-red-700 text-xs font-medium"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              {COLS.map(col => (
+                <th
+                  key={col.key}
+                  onClick={() => toggleSort(col.key)}
+                  className="text-left px-4 py-3 font-medium text-slate-600 cursor-pointer hover:text-slate-900 select-none whitespace-nowrap"
+                >
+                  {col.label}
+                  {sortKey === col.key && (
+                    <span className="ml-1 text-blue-500">{sortDir === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </th>
+              ))}
+              <th className="px-4 py-3" />
             </tr>
-          ))}
-          {sorted.length === 0 && (
-            <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-400">No tasks yet</td></tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sorted.map(task => (
+              <tr
+                key={task.id}
+                className={`border-b border-slate-100 hover:bg-slate-50 transition-colors
+                  ${isOverdue(task) ? 'bg-red-50 hover:bg-red-100' : ''}`}
+              >
+                <td className="px-4 py-3 font-medium text-slate-800">
+                  {isOverdue(task) && <span className="text-red-500 mr-1">!</span>}
+                  {task.name}
+                </td>
+                <td className="px-4 py-3">
+                  {task.event
+                    ? <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 font-medium">{task.event}</span>
+                    : <span className="text-slate-300">—</span>}
+                </td>
+                <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
+                <td className="px-4 py-3"><PriorityBadge priority={task.priority} /></td>
+                <td className={`px-4 py-3 whitespace-nowrap ${isOverdue(task) ? 'text-red-600 font-medium' : 'text-slate-600'}`}>
+                  {task.due_date || '—'}
+                </td>
+                <td className="px-4 py-3 text-slate-600">{task.assignee || '—'}</td>
+                <td className="px-4 py-3">
+                  {task.gdrive_link ? (
+                    <a 
+                      href={task.gdrive_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium transition-colors"
+                    >
+                      View
+                    </a>
+                  ) : (
+                    <span className="text-slate-300">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="max-w-[200px] truncate text-slate-500 italic" title={task.remarks}>
+                    {task.remarks || '—'}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => onEdit(task)}
+                      className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteTask(task.id)}
+                      className="text-red-500 hover:text-red-700 text-xs font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {sorted.length === 0 && (
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-400">No tasks yet</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

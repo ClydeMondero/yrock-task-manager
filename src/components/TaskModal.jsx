@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { useTasks } from '../context/TaskContext'
 import AssigneeModal from './AssigneeModal'
+import EventModal from './EventModal'
 
 const STATUSES = ['todo', 'in_progress', 'done', 'blocked']
 const PRIORITIES = ['high', 'medium', 'low']
 const REMINDERS = ['none', '1d', '2h', '30m', 'ondue']
 const RECURRING = ['none', 'daily', 'weekly', 'monthly']
 
-export default function TaskModal({ task, onClose, events = [] }) {
-  const { addTask, updateTask, assignees } = useTasks()
+export default function TaskModal({ task, onClose }) {
+  const { addTask, updateTask, assignees, events } = useTasks()
   const isEdit = !!task
 
   const [form, setForm] = useState({
@@ -21,10 +22,13 @@ export default function TaskModal({ task, onClose, events = [] }) {
     assignee_tg: task?.assignee_tg ?? '',
     reminder: task?.reminder ?? 'none',
     recurring: task?.recurring ?? 'none',
+    remarks: task?.remarks ?? '',
+    gdrive_link: task?.gdrive_link ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
   const [showAddAssignee, setShowAddAssignee] = useState(false)
+  const [showAddEvent, setShowAddEvent] = useState(false)
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
 
@@ -84,19 +88,28 @@ export default function TaskModal({ task, onClose, events = [] }) {
               />
             </label>
 
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600">Event / Group</span>
-              <input
-                list="event-options"
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-600">Event / Group</span>
+                <button 
+                  type="button"
+                  onClick={() => setShowAddEvent(true)}
+                  className="text-[10px] text-blue-600 hover:text-blue-800 font-bold uppercase tracking-wider"
+                >
+                  + Add New
+                </button>
+              </div>
+              <select
                 value={form.event}
                 onChange={e => set('event', e.target.value)}
                 className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="e.g. Anniversary, Product Launch"
-              />
-              <datalist id="event-options">
-                {events.map(ev => <option key={ev} value={ev} />)}
-              </datalist>
-            </label>
+              >
+                <option value="">No Event</option>
+                {events.map(ev => (
+                  <option key={ev.id} value={ev.name}>{ev.name}</option>
+                ))}
+              </select>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1">
@@ -177,12 +190,27 @@ export default function TaskModal({ task, onClose, events = [] }) {
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
-              {form.assignee && (
-                <p className="text-[10px] text-slate-400 ml-1 mt-0.5">
-                  Telegram ID: {form.assignee_tg}
-                </p>
-              )}
             </div>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-600">Remarks</span>
+              <textarea
+                value={form.remarks}
+                onChange={e => set('remarks', e.target.value)}
+                className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 h-20 resize-none"
+                placeholder="Additional notes..."
+              />
+            </label>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-600">GDrive Link</span>
+              <input
+                value={form.gdrive_link}
+                onChange={e => set('gdrive_link', e.target.value)}
+                className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="https://drive.google.com/..."
+              />
+            </label>
 
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
@@ -200,6 +228,7 @@ export default function TaskModal({ task, onClose, events = [] }) {
         </div>
       </div>
       {showAddAssignee && <AssigneeModal onClose={() => setShowAddAssignee(false)} />}
+      {showAddEvent && <EventModal onClose={() => setShowAddEvent(false)} />}
     </>
   )
 }
