@@ -66,12 +66,21 @@ export default function ListView({ tasks, onEdit }) {
                   ${isOverdue(task) ? 'bg-red-50 hover:bg-red-100' : ''}`}
               >
                 <td className="px-4 py-3 font-medium text-slate-800">
-                  {isOverdue(task) && <span className="text-red-500 mr-1">!</span>}
-                  {task.name}
+                  <div className="flex items-center gap-2">
+                    {isOverdue(task) && <span className="text-red-500">!</span>}
+                    <span>{task.name}</span>
+                    {task.recurring === 'ongoing' && (
+                      <span className="text-xs bg-violet-100 text-violet-600 font-bold px-1.5 py-0.5 rounded" title="Ongoing task">∞</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   {task.ministry
-                    ? <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">{task.ministry}</span>
+                    ? <div className="flex flex-wrap gap-1">
+                        {task.ministry.split(',').map(n => n.trim()).filter(Boolean).map(name => (
+                          <span key={name} className="inline-block px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">{name}</span>
+                        ))}
+                      </div>
                     : <span className="text-slate-300">—</span>}
                 </td>
                 <td className="px-4 py-3">

@@ -84,7 +84,21 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         recurring = str(task.get('recurring', 'none')).lower()
         
-        if new_status == "Done" and recurring != "none" and recurring != "":
+        if new_status == "Done" and recurring not in ("none", ""):
+            # Ongoing tasks: reset to todo, no date change
+            if recurring == "ongoing":
+                sheets.update_task_fields(task_id, {"status": "Todo", "reminder_sent": "FALSE"})
+                clean_text = query.message.text.split("💡")[0].strip()
+                updated_text = (
+                    f"{clean_text}\n\n"
+                    f"♾️ *ONGOING TASK — reset to TODO.*\n"
+                    f"This task never ends!"
+                )
+                await query.edit_message_text(text=updated_text, parse_mode='Markdown')
+                log.info(f"Ongoing task {task_id} reset to todo")
+                return
+
+            # Recurring tasks: bump due date
             next_due = calculate_next_due(task.get('due_date'), recurring)
             if next_due:
                 fields = {
@@ -93,7 +107,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "reminder_sent": "FALSE"
                 }
                 sheets.update_task_fields(task_id, fields)
-                
+
                 clean_text = query.message.text.split("💡")[0].strip()
                 updated_text = (
                     f"{clean_text}\n\n"

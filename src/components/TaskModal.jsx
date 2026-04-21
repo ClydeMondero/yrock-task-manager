@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { addDays, addWeeks, addMonths, format, parseISO } from 'date-fns'
 import { useTasks } from '../context/TaskContext'
 import AssigneeModal from './AssigneeModal'
 import EventModal from './EventModal'
@@ -7,9 +8,9 @@ import MinistryModal from './MinistryModal'
 const STATUSES = ['todo', 'in_progress', 'done', 'blocked']
 const PRIORITIES = ['high', 'medium', 'low']
 const REMINDERS = ['none', '1d', '2h', '30m', 'ondue']
-const RECURRING = ['none', 'daily', 'weekly', 'monthly']
+const RECURRING = ['none', 'ongoing', 'daily', 'weekly', 'monthly']
 
-function parseAssigneeNames(str) {
+function parseNames(str) {
   return str ? str.split(',').map(s => s.trim()).filter(Boolean) : []
 }
 
@@ -27,16 +28,23 @@ export default function TaskModal({ task, onClose }) {
     recurring: task?.recurring ?? 'none',
     remarks: task?.remarks ?? '',
     gdrive_link: task?.gdrive_link ?? '',
-    ministry: task?.ministry ?? '',
   })
 
-  // Multi-assignee state — array of assignee objects
+  // Multi-assignee state
   const [selectedAssignees, setSelectedAssignees] = useState(() => {
     if (!task?.assignee) return []
-    const names = parseAssigneeNames(task.assignee)
-    return names.map(name => {
+    return parseNames(task.assignee).map(name => {
       const found = assignees.find(a => a.name === name)
       return found ?? { id: name, name, telegram_id: '' }
+    })
+  })
+
+  // Multi-ministry state
+  const [selectedMinistries, setSelectedMinistries] = useState(() => {
+    if (!task?.ministry) return []
+    return parseNames(task.ministry).map(name => {
+      const found = ministries.find(m => m.name === name)
+      return found ?? { id: name, name }
     })
   })
 
@@ -59,18 +67,53 @@ export default function TaskModal({ task, onClose }) {
     setSelectedAssignees(prev => prev.filter(a => a.id !== personId))
   }
 
+  function toggleMinistry(m) {
+    setSelectedMinistries(prev => {
+      const exists = prev.find(x => x.id === m.id)
+      return exists ? prev.filter(x => x.id !== m.id) : [...prev, m]
+    })
+  }
+
+  function removeMinistry(id) {
+    setSelectedMinistries(prev => prev.filter(x => x.id !== id))
+  }
+
+  function calcNextDue(dueDateStr, recurring) {
+    if (!dueDateStr) return null
+    try {
+      const d = parseISO(dueDateStr)
+      if (recurring === 'daily')   return format(addDays(d, 1), 'yyyy-MM-dd')
+      if (recurring === 'weekly')  return format(addWeeks(d, 1), 'yyyy-MM-dd')
+      if (recurring === 'monthly') return format(addMonths(d, 1), 'yyyy-MM-dd')
+    } catch { return null }
+    return null
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.name.trim()) { setErr('Name is required'); return }
     const assigneeStr = selectedAssignees.map(a => a.name).join(', ')
     const assigneeTgStr = selectedAssignees.map(a => a.telegram_id).filter(Boolean).join(', ')
-    const payload = { ...form, assignee: assigneeStr, assignee_tg: assigneeTgStr }
+    const ministryStr = selectedMinistries.map(m => m.name).join(', ')
+
+    let payload = { ...form, assignee: assigneeStr, assignee_tg: assigneeTgStr, ministry: ministryStr }
+
+    // If marking a recurring task as done → bump date + reset to todo
+    const isRecurring = payload.recurring && !['none', 'ongoing', ''].includes(payload.recurring)
+    if (payload.status === 'done' && isRecurring) {
+      const nextDue = calcNextDue(payload.due_date, payload.recurring)
+      if (nextDue) {
+        payload = { ...payload, status: 'todo', due_date: nextDue, reminder_sent: 'FALSE' }
+        setErr(`✓ Recurring task reset — next due: ${nextDue}`)
+      }
+    }
+
     try {
       setSaving(true)
       if (isEdit) {
         await updateTask(task.id, {
           ...payload,
-          reminder_sent: (form.reminder !== task.reminder || form.due_date !== task.due_date) ? 'FALSE' : task.reminder_sent
+          reminder_sent: payload.reminder_sent ?? ((form.reminder !== task.reminder || form.due_date !== task.due_date) ? 'FALSE' : task.reminder_sent)
         })
       } else {
         await addTask(payload)
@@ -139,16 +182,42 @@ export default function TaskModal({ task, onClose }) {
                     + Add
                   </button>
                 </div>
-                <select
-                  value={form.ministry}
-                  onChange={e => set('ministry', e.target.value)}
-                  className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  <option value="">No Ministry</option>
-                  {ministries.map(m => (
-                    <option key={m.id} value={m.name}>{m.name}</option>
-                  ))}
-                </select>
+
+                {/* Selected ministry chips */}
+                {selectedMinistries.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {selectedMinistries.map(m => (
+                      <span key={m.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                        {m.name}
+                        <button type="button" onClick={() => removeMinistry(m.id)} className="text-purple-400 hover:text-purple-700 leading-none">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Ministry toggle list */}
+                <div className="border border-slate-300 rounded max-h-28 overflow-y-auto">
+                  {ministries.length === 0 && (
+                    <p className="text-xs text-slate-400 px-3 py-2">No ministries yet — add one above</p>
+                  )}
+                  {ministries.map(m => {
+                    const selected = !!selectedMinistries.find(s => s.id === m.id)
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => toggleMinistry(m)}
+                        className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-slate-50 transition-colors ${selected ? 'bg-purple-50' : ''}`}
+                      >
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 text-[10px]
+                          ${selected ? 'bg-purple-600 border-purple-600 text-white' : 'border-slate-300'}`}>
+                          {selected ? '✓' : ''}
+                        </span>
+                        <span className={selected ? 'text-purple-700 font-medium' : 'text-slate-700'}>{m.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
 
@@ -206,7 +275,11 @@ export default function TaskModal({ task, onClose }) {
                 onChange={e => set('recurring', e.target.value)}
                 className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                {RECURRING.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                {RECURRING.map(r => (
+                  <option key={r} value={r}>
+                    {r === 'none' ? 'None' : r === 'ongoing' ? '∞ Ongoing (never done)' : r.charAt(0).toUpperCase() + r.slice(1)}
+                  </option>
+                ))}
               </select>
             </label>
 

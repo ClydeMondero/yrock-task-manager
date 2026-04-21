@@ -49,7 +49,9 @@ function groupTasks(tasks, groupBy) {
         : ['Unassigned']
       keys = names
     } else if (groupBy === 'ministry') {
-      keys = [task.ministry || 'No Ministry']
+      keys = task.ministry
+        ? task.ministry.split(',').map(s => s.trim()).filter(Boolean)
+        : ['No Ministry']
     } else {
       keys = [task.event || 'No Event']
     }

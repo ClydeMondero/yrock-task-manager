@@ -37,7 +37,7 @@ export default function App() {
   const filtered = useMemo(() => {
     return tasks.filter(t => {
       const matchEvent = !filterEvent || t.event === filterEvent
-      const matchMinistry = !filterMinistry || t.ministry === filterMinistry
+      const matchMinistry = !filterMinistry || (t.ministry ?? '').split(',').map(s => s.trim()).includes(filterMinistry)
       const matchAssignee = !filterAssignee || (t.assignee ?? '').split(',').map(s => s.trim()).includes(filterAssignee)
       const matchStatus = !filterStatus || t.status === filterStatus
       const matchSearch = !searchTerm || t.name.toLowerCase().includes(searchTerm.toLowerCase())

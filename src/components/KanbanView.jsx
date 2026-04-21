@@ -10,7 +10,19 @@ import {
 } from '@dnd-kit/core'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useState, useRef } from 'react'
+import { addDays, addWeeks, addMonths, format, parseISO } from 'date-fns'
 import ScreenshotButton from './ScreenshotButton'
+
+function calcNextDue(dueDateStr, recurring) {
+  if (!dueDateStr) return null
+  try {
+    const d = parseISO(dueDateStr)
+    if (recurring === 'daily')   return format(addDays(d, 1), 'yyyy-MM-dd')
+    if (recurring === 'weekly')  return format(addWeeks(d, 1), 'yyyy-MM-dd')
+    if (recurring === 'monthly') return format(addMonths(d, 1), 'yyyy-MM-dd')
+  } catch { return null }
+  return null
+}
 
 const COLUMNS = [
   {
@@ -71,7 +83,12 @@ function TaskCard({ task, onEdit }) {
       {...attributes}
       className={`bg-white border border-slate-200 border-l-4 ${accent} rounded-lg p-3 shadow-sm cursor-grab active:cursor-grabbing`}
     >
-      <p className="font-medium text-slate-800 text-sm mb-2">{task.name}</p>
+      <div className="flex items-start justify-between gap-1 mb-2">
+        <p className="font-medium text-slate-800 text-sm leading-snug">{task.name}</p>
+        {task.recurring === 'ongoing' && (
+          <span className="text-xs bg-violet-100 text-violet-600 font-bold px-1.5 py-0.5 rounded flex-shrink-0" title="Ongoing — cannot be marked done">∞</span>
+        )}
+      </div>
       <div className="flex items-center gap-2 flex-wrap">
         <PriorityBadge priority={task.priority} />
         {task.due_date && <span className="text-xs text-slate-400">{task.due_date}</span>}
@@ -124,9 +141,15 @@ function Column({ col, tasks, onEdit }) {
 export default function KanbanView({ tasks, onEdit }) {
   const { updateTask } = useTasks()
   const [activeTask, setActiveTask] = useState(null)
+  const [toast, setToast] = useState(null)
   const boardRef = useRef(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  function showToast(msg) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3500)
+  }
 
   function handleDragStart({ active }) {
     setActiveTask(tasks.find(t => t.id === active.id))
@@ -137,13 +160,36 @@ export default function KanbanView({ tasks, onEdit }) {
     if (!over) return
     const newStatus = over.id
     const task = tasks.find(t => t.id === active.id)
-    if (task && task.status !== newStatus) {
-      updateTask(task.id, { status: newStatus })
+    if (!task || task.status === newStatus) return
+
+    // Ongoing — block done entirely
+    if (task.recurring === 'ongoing' && newStatus === 'done') {
+      showToast('∞ Ongoing task — cannot be marked done.')
+      return
     }
+
+    // Recurring (daily/weekly/monthly) dropped on Done → reset + bump date
+    if (newStatus === 'done' && task.recurring && !['none', 'ongoing', ''].includes(task.recurring)) {
+      const nextDue = calcNextDue(task.due_date, task.recurring)
+      if (nextDue) {
+        updateTask(task.id, { status: 'todo', due_date: nextDue, reminder_sent: 'FALSE' })
+        showToast(`✓ Done! Resets to Todo on ${nextDue} (${task.recurring})`)
+        return
+      }
+    }
+
+    updateTask(task.id, { status: newStatus })
   }
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white text-sm px-5 py-3 rounded-xl shadow-xl animate-fade-in">
+          {toast}
+        </div>
+      )}
+
       <div className="flex justify-end mb-3">
         <ScreenshotButton targetRef={boardRef} label="Kanban" />
       </div>
