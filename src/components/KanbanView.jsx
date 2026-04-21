@@ -9,7 +9,8 @@ import {
   DragOverlay,
 } from '@dnd-kit/core'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import ScreenshotButton from './ScreenshotButton'
 
 const COLUMNS = [
   { id: 'todo', label: 'Todo' },
@@ -72,6 +73,7 @@ function Column({ col, tasks, onEdit }) {
 export default function KanbanView({ tasks, onEdit }) {
   const { updateTask } = useTasks()
   const [activeTask, setActiveTask] = useState(null)
+  const boardRef = useRef(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -91,7 +93,10 @@ export default function KanbanView({ tasks, onEdit }) {
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex justify-end mb-3">
+        <ScreenshotButton targetRef={boardRef} label="Kanban" />
+      </div>
+      <div ref={boardRef} className="flex gap-4 overflow-x-auto pb-4 bg-slate-50 rounded-lg p-2">
         {COLUMNS.map(col => (
           <Column
             key={col.id}

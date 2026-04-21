@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import ScreenshotButton from './ScreenshotButton'
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   startOfWeek, endOfWeek, format, isSameMonth, isToday, parseISO, isSameDay,
@@ -7,6 +8,7 @@ import { StatusBadge } from './Badges'
 
 export default function CalendarView({ tasks, onEdit }) {
   const [current, setCurrent] = useState(new Date())
+  const calRef = useRef(null)
 
   const monthStart = startOfMonth(current)
   const monthEnd = endOfMonth(current)
@@ -22,7 +24,7 @@ export default function CalendarView({ tasks, onEdit }) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+    <div ref={calRef} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
         <button
           onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
@@ -31,12 +33,15 @@ export default function CalendarView({ tasks, onEdit }) {
           ←
         </button>
         <h2 className="font-semibold text-slate-800">{format(current, 'MMMM yyyy')}</h2>
-        <button
-          onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-          className="p-2 rounded hover:bg-slate-100 text-slate-600"
-        >
-          →
-        </button>
+        <div className="flex items-center gap-2">
+          <ScreenshotButton targetRef={calRef} label="Calendar" />
+          <button
+            onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+            className="p-2 rounded hover:bg-slate-100 text-slate-600"
+          >
+            →
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-7 border-b border-slate-200">
