@@ -6,8 +6,28 @@ export default function EventModal({ onClose }) {
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [recurring, setRecurring] = useState('none')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+
+  const DAYS = [
+    { label: 'None (Whole Period)', value: 'none' },
+    { label: 'Every Sunday', value: '0' },
+    { label: 'Every Monday', value: '1' },
+    { label: 'Every Tuesday', value: '2' },
+    { label: 'Every Wednesday', value: '3' },
+    { label: 'Every Thursday', value: '4' },
+    { label: 'Every Friday', value: '5' },
+    { label: 'Every Saturday', value: '6' },
+    { label: '--- Monthly ---', value: 'none', disabled: true },
+    { label: '1st Sunday of Month', value: 'first_0' },
+    { label: '1st Monday of Month', value: 'first_1' },
+    { label: '1st Tuesday of Month', value: 'first_2' },
+    { label: '1st Wednesday of Month', value: 'first_3' },
+    { label: '1st Thursday of Month', value: 'first_4' },
+    { label: '1st Friday of Month', value: 'first_5' },
+    { label: '1st Saturday of Month', value: 'first_6' },
+  ]
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -17,7 +37,8 @@ export default function EventModal({ onClose }) {
       await addEvent({ 
         name, 
         start_date: startDate, 
-        end_date: endDate 
+        end_date: endDate,
+        recurring
       })
       onClose()
     } catch (e) {
@@ -50,7 +71,7 @@ export default function EventModal({ onClose }) {
 
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600">Start Date</span>
+              <span className="text-xs font-medium text-slate-600">Start Date (Optional)</span>
               <input
                 type="date"
                 value={startDate}
@@ -59,7 +80,7 @@ export default function EventModal({ onClose }) {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-slate-600">End Date</span>
+              <span className="text-xs font-medium text-slate-600">End Date (Optional)</span>
               <input
                 type="date"
                 value={endDate}
@@ -68,6 +89,18 @@ export default function EventModal({ onClose }) {
               />
             </label>
           </div>
+          <p className="text-[10px] text-slate-400 -mt-2 italic">Leave dates blank for infinite/permanent events.</p>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-600">Recurring Day</span>
+            <select
+              value={recurring}
+              onChange={e => setRecurring(e.target.value)}
+              className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              {DAYS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+          </label>
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">

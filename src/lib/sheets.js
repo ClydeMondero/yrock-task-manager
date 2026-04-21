@@ -106,13 +106,14 @@ export async function getAssignees() {
 
 export async function getEvents() {
   try {
-    const data = await sheetsRequest('GET', `/values/Events!A2:D`)
+    const data = await sheetsRequest('GET', `/values/Events!A2:E`)
     const rows = data.values ?? []
     return rows.map(row => ({
       id: row[0],
       name: row[1],
       start_date: row[2] ?? '',
-      end_date: row[3] ?? ''
+      end_date: row[3] ?? '',
+      recurring: row[4] ?? 'none'
     })).filter(e => e.id)
   } catch (e) {
     console.error("Failed to fetch events", e)
@@ -128,7 +129,7 @@ export async function addAssignee(person) {
 
 export async function addEvent(event) {
   await sheetsRequest('POST', `/values/Events!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
-    values: [[event.id, event.name, event.start_date ?? '', event.end_date ?? '']],
+    values: [[event.id, event.name, event.start_date ?? '', event.end_date ?? '', event.recurring ?? 'none']],
   })
 }
 

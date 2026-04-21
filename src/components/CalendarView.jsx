@@ -25,16 +25,46 @@ export default function CalendarView({ tasks, events, onEdit }) {
 
   function eventsOnDay(day) {
     return (events || []).filter(e => {
-      if (!e.start_date || !e.end_date) return false
-      try {
-        const start = parseISO(e.start_date)
-        const end = parseISO(e.end_date)
-        // Ensure start is before end to avoid errors
-        return isWithinInterval(day, { 
-          start: start < end ? start : end, 
-          end: end > start ? end : start 
-        })
-      } catch { return false }
+      const hasStart = !!e.start_date
+      const hasEnd = !!e.end_date
+      
+      // 1. Handle Date Constraints
+      if (hasStart && hasEnd) {
+        // Range: Check if day is within [start, end]
+        try {
+          const start = parseISO(e.start_date)
+          const end = parseISO(e.end_date)
+          const dayInRange = isWithinInterval(day, { 
+            start: start < end ? start : end, 
+            end: end > start ? end : start 
+          })
+          if (!dayInRange) return false
+        } catch { return false }
+      } else if (hasStart || hasEnd) {
+        // Single Date: Use start_date (or end_date if start is missing) as the specific day
+        try {
+          const target = parseISO(e.start_date || e.end_date)
+          if (!isSameDay(day, target)) return false
+        } catch { return false }
+      }
+
+      // 2. Handle Recurring Patterns
+      // If we are here, the day has passed any specific date constraints (or there were none)
+      if (e.recurring && e.recurring !== 'none') {
+        const isFirst = e.recurring.startsWith('first_')
+        const targetDay = isFirst ? e.recurring.split('_')[1] : e.recurring
+        
+        const matchesDay = day.getDay().toString() === targetDay
+        if (!matchesDay) return false
+        
+        if (isFirst) {
+          return day.getDate() <= 7
+        }
+        return true
+      }
+
+      // If no recurring pattern is set, and it passed date checks (or is infinite), show it.
+      return true
     })
   }
 
