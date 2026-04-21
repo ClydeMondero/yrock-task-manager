@@ -2,11 +2,11 @@ import { useState, useRef } from 'react'
 import ScreenshotButton from './ScreenshotButton'
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
-  startOfWeek, endOfWeek, format, isSameMonth, isToday, parseISO, isSameDay,
+  startOfWeek, endOfWeek, format, isSameMonth, isToday, parseISO, isSameDay, isWithinInterval
 } from 'date-fns'
 import { StatusBadge } from './Badges'
 
-export default function CalendarView({ tasks, onEdit }) {
+export default function CalendarView({ tasks, events, onEdit }) {
   const [current, setCurrent] = useState(new Date())
   const calRef = useRef(null)
 
@@ -20,6 +20,21 @@ export default function CalendarView({ tasks, onEdit }) {
     return tasks.filter(t => {
       if (!t.due_date) return false
       try { return isSameDay(parseISO(t.due_date), day) } catch { return false }
+    })
+  }
+
+  function eventsOnDay(day) {
+    return (events || []).filter(e => {
+      if (!e.start_date || !e.end_date) return false
+      try {
+        const start = parseISO(e.start_date)
+        const end = parseISO(e.end_date)
+        // Ensure start is before end to avoid errors
+        return isWithinInterval(day, { 
+          start: start < end ? start : end, 
+          end: end > start ? end : start 
+        })
+      } catch { return false }
     })
   }
 
@@ -53,6 +68,7 @@ export default function CalendarView({ tasks, onEdit }) {
       <div className="grid grid-cols-7">
         {days.map(day => {
           const dayTasks = tasksOnDay(day)
+          const dayEvents = eventsOnDay(day)
           const inMonth = isSameMonth(day, current)
           const today = isToday(day)
           return (
@@ -67,6 +83,18 @@ export default function CalendarView({ tasks, onEdit }) {
                 {format(day, 'd')}
               </span>
               <div className="mt-1 flex flex-col gap-0.5">
+                {/* Events display */}
+                {dayEvents.map(event => (
+                  <div
+                    key={event.id}
+                    className="text-[10px] leading-tight px-1 py-0.5 border border-dashed border-slate-300 bg-slate-50 text-slate-600 rounded truncate mb-0.5"
+                    title={`Event: ${event.name}`}
+                  >
+                    {event.name}
+                  </div>
+                ))}
+
+                {/* Tasks display */}
                 {dayTasks.slice(0, 3).map(task => (
                   <button
                     key={task.id}

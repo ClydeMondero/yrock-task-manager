@@ -381,7 +381,7 @@ export default function App() {
               </>
             )}
             {view === 'Kanban' && <KanbanView tasks={filtered} onEdit={openEdit} />}
-            {view === 'Calendar' && <CalendarView tasks={filtered} onEdit={openEdit} />}
+            {view === 'Calendar' && <CalendarView tasks={filtered} events={managedEvents} onEdit={openEdit} />}
             {view === 'Report' && <ReportView tasks={filtered} />}
           </div>
         )}
