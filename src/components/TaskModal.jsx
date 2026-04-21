@@ -64,7 +64,7 @@ export default function TaskModal({ task, onClose }) {
     }
   }
 
-  const currentAssignee = assignees.find(a => a.telegram_id === form.assignee_tg && a.name === form.assignee)
+  const currentAssignee = assignees.find(a => a.name === form.assignee) ?? assignees.find(a => String(a.telegram_id) === String(form.assignee_tg))
 
   return (
     <>
