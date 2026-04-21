@@ -160,9 +160,14 @@ async def check_reminders(context: ContextTypes.DEFAULT_TYPE):
 
         if timedelta(0) <= time_to_due <= window:
             assignee_name = task.get('assignee', '') or 'You'
-            target_chat_id = str(task.get('assignee_tg', '')).strip() or CHAT_ID
 
-            if not target_chat_id:
+            # Support multiple comma-separated TG IDs
+            tg_raw = str(task.get('assignee_tg', '')).strip()
+            chat_ids = [cid.strip() for cid in tg_raw.split(',') if cid.strip()] if tg_raw else []
+            if not chat_ids and CHAT_ID:
+                chat_ids = [CHAT_ID]
+
+            if not chat_ids:
                 continue
 
             priority_emoji = {
@@ -173,7 +178,7 @@ async def check_reminders(context: ContextTypes.DEFAULT_TYPE):
 
             pretty_date = format_date(due_raw)
             recurring_label = f"\n🔁 *Recurring:* {task.get('recurring', 'No').title()}" if task.get('recurring') and task.get('recurring') != 'none' else ""
-            
+
             keyboard = [
                 [InlineKeyboardButton("✅ Done", callback_data=f"done_{task['id']}")],
                 [
@@ -194,17 +199,22 @@ async def check_reminders(context: ContextTypes.DEFAULT_TYPE):
                 f"💡 _Update the status directly:_ "
             )
 
-            try:
-                await bot.send_message(
-                    chat_id=target_chat_id, 
-                    text=msg, 
-                    parse_mode='Markdown',
-                    reply_markup=reply_markup
-                )
+            sent_any = False
+            for chat_id in chat_ids:
+                try:
+                    await bot.send_message(
+                        chat_id=chat_id,
+                        text=msg,
+                        parse_mode='Markdown',
+                        reply_markup=reply_markup
+                    )
+                    sent_any = True
+                    log.info(f"Sent reminder for task {task['id']} to chat {chat_id}")
+                except Exception as e:
+                    log.error(f"Failed to send reminder for task {task['id']} to {chat_id}: {e}")
+
+            if sent_any:
                 sheets.mark_reminder_sent(task['id'])
-                log.info(f"Sent reminder for task {task['id']} to chat {target_chat_id}")
-            except Exception as e:
-                log.error(f"Failed to send/update task {task['id']}: {e}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /start command."""

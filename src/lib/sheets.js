@@ -2,7 +2,7 @@ const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID
 const CLIENT_EMAIL = import.meta.env.VITE_GOOGLE_SERVICE_ACCOUNT_EMAIL
 const PRIVATE_KEY_PEM = import.meta.env.VITE_GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
 const SHEET_NAME = 'Tasks'
-const COLUMNS = ['id', 'name', 'event', 'status', 'priority', 'due_date', 'assignee', 'assignee_tg', 'reminder', 'reminder_sent', 'recurring', 'remarks', 'gdrive_link']
+const COLUMNS = ['id', 'name', 'event', 'status', 'priority', 'due_date', 'assignee', 'assignee_tg', 'reminder', 'reminder_sent', 'recurring', 'remarks', 'gdrive_link', 'ministry']
 const SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
 
 let _tokenCache = null
@@ -84,7 +84,7 @@ function taskToRow(task) {
 }
 
 export async function getTasks() {
-  const data = await sheetsRequest('GET', `/values/${SHEET_NAME}!A2:K`)
+  const data = await sheetsRequest('GET', `/values/${SHEET_NAME}!A2:N`)
   const rows = data.values ?? []
   return rows.map((row, i) => rowToTask(row, i)).filter(t => t.id)
 }
@@ -130,6 +130,26 @@ export async function addEvent(event) {
   })
 }
 
+export async function getMinistries() {
+  try {
+    const data = await sheetsRequest('GET', `/values/Ministries!A2:B`)
+    const rows = data.values ?? []
+    return rows.map(row => ({
+      id: row[0],
+      name: row[1],
+    })).filter(m => m.id)
+  } catch (e) {
+    console.error('Failed to fetch ministries', e)
+    return []
+  }
+}
+
+export async function addMinistry(ministry) {
+  await sheetsRequest('POST', `/values/Ministries!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    values: [[ministry.id, ministry.name]],
+  })
+}
+
 export async function addTask(task) {
   await sheetsRequest('POST', `/values/${SHEET_NAME}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
     values: [taskToRow(task)],
@@ -141,7 +161,7 @@ export async function updateTask(id, fields) {
   const task = tasks.find(t => t.id === id)
   if (!task) throw new Error(`Task ${id} not found`)
   const updated = { ...task, ...fields }
-  await sheetsRequest('PUT', `/values/${SHEET_NAME}!A${task._row}:J${task._row}?valueInputOption=RAW`, {
+  await sheetsRequest('PUT', `/values/${SHEET_NAME}!A${task._row}:N${task._row}?valueInputOption=RAW`, {
     values: [taskToRow(updated)],
   })
 }
@@ -150,7 +170,7 @@ export async function deleteTask(id) {
   const tasks = await getTasks()
   const task = tasks.find(t => t.id === id)
   if (!task) return
-  await sheetsRequest('PUT', `/values/${SHEET_NAME}!A${task._row}:J${task._row}?valueInputOption=RAW`, {
-    values: [['', '', '', '', '', '', '', '', '', '']],
+  await sheetsRequest('PUT', `/values/${SHEET_NAME}!A${task._row}:N${task._row}?valueInputOption=RAW`, {
+    values: [['', '', '', '', '', '', '', '', '', '', '', '', '', '']],
   })
 }

@@ -5,6 +5,7 @@ import { StatusBadge, PriorityBadge } from './Badges'
 
 const COLS = [
   { key: 'name', label: 'Name' },
+  { key: 'ministry', label: 'Ministry' },
   { key: 'event', label: 'Event' },
   { key: 'status', label: 'Status' },
   { key: 'priority', label: 'Priority' },
@@ -69,6 +70,11 @@ export default function ListView({ tasks, onEdit }) {
                   {task.name}
                 </td>
                 <td className="px-4 py-3">
+                  {task.ministry
+                    ? <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">{task.ministry}</span>
+                    : <span className="text-slate-300">—</span>}
+                </td>
+                <td className="px-4 py-3">
                   {task.event
                     ? <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 font-medium">{task.event}</span>
                     : <span className="text-slate-300">—</span>}
@@ -78,7 +84,15 @@ export default function ListView({ tasks, onEdit }) {
                 <td className={`px-4 py-3 whitespace-nowrap ${isOverdue(task) ? 'text-red-600 font-medium' : 'text-slate-600'}`}>
                   {task.due_date || '—'}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{task.assignee || '—'}</td>
+                <td className="px-4 py-3">
+                  {task.assignee
+                    ? <div className="flex flex-wrap gap-1">
+                        {task.assignee.split(',').map(n => n.trim()).filter(Boolean).map(name => (
+                          <span key={name} className="inline-block px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">{name}</span>
+                        ))}
+                      </div>
+                    : <span className="text-slate-300">—</span>}
+                </td>
                 <td className="px-4 py-3">
                   {task.gdrive_link ? (
                     <a 
@@ -117,7 +131,7 @@ export default function ListView({ tasks, onEdit }) {
               </tr>
             ))}
             {sorted.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-400">No tasks yet</td></tr>
+              <tr><td colSpan={10} className="px-4 py-8 text-center text-slate-400">No tasks yet</td></tr>
             )}
           </tbody>
         </table>
