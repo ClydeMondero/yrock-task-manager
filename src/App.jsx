@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTasks } from './context/TaskContext'
 import ListView from './components/ListView'
 import KanbanView from './components/KanbanView'
@@ -12,6 +12,103 @@ import MinistryModal from './components/MinistryModal'
 const VIEWS = ['List', 'Kanban', 'Calendar', 'Report']
 const ITEMS_PER_PAGE = 15
 
+// ── Multi-select dropdown filter ─────────────────────────────────────────────
+function MultiSelectFilter({ label, options, selected, onChange, colorCls = 'bg-blue-600' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function toggle(value) {
+    onChange(
+      selected.includes(value)
+        ? selected.filter(v => v !== value)
+        : [...selected, value]
+    )
+  }
+
+  function clear(e) {
+    e.stopPropagation()
+    onChange([])
+  }
+
+  const count = selected.length
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm border transition-colors
+          ${count > 0
+            ? 'bg-blue-50 border-blue-300 text-blue-700'
+            : 'bg-slate-100 border-slate-200 text-slate-600 hover:border-slate-300'}`}
+      >
+        <span>{label}</span>
+        {count > 0 && (
+          <>
+            <span className={`text-xs font-bold text-white px-1.5 py-0.5 rounded-full leading-none ${colorCls}`}>
+              {count}
+            </span>
+            <span
+              onClick={clear}
+              className="text-blue-400 hover:text-blue-700 leading-none text-base"
+              title="Clear"
+            >
+              ×
+            </span>
+          </>
+        )}
+        <span className="text-slate-400 text-xs">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-1 left-0 z-40 bg-white border border-slate-200 rounded-xl shadow-lg min-w-44 py-1 max-h-64 overflow-y-auto">
+          {options.length === 0 && (
+            <p className="text-xs text-slate-400 px-3 py-2">No options</p>
+          )}
+          {options.map(opt => {
+            const val = typeof opt === 'string' ? opt : opt.name
+            const isSelected = selected.includes(val)
+            return (
+              <button
+                key={val}
+                onClick={() => toggle(val)}
+                className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors
+                  ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'}`}
+              >
+                <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-[10px]
+                  ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'}`}>
+                  {isSelected ? '✓' : ''}
+                </span>
+                {val}
+              </button>
+            )
+          })}
+          {selected.length > 0 && (
+            <>
+              <div className="border-t border-slate-100 mt-1 pt-1" />
+              <button
+                onClick={() => onChange([])}
+                className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50"
+              >
+                Clear all
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState('List')
   const [modalOpen, setModalOpen] = useState(false)
@@ -21,8 +118,8 @@ export default function App() {
   const [editTask, setEditTask] = useState(null)
 
   const [filterEvent, setFilterEvent] = useState('')
-  const [filterAssignee, setFilterAssignee] = useState('')
-  const [filterMinistry, setFilterMinistry] = useState('')
+  const [filterMinistries, setFilterMinistries] = useState([])   // array
+  const [filterAssignees, setFilterAssignees] = useState([])     // array
   const [filterStatus, setFilterStatus] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -37,13 +134,23 @@ export default function App() {
   const filtered = useMemo(() => {
     return tasks.filter(t => {
       const matchEvent = !filterEvent || t.event === filterEvent
-      const matchMinistry = !filterMinistry || (t.ministry ?? '').split(',').map(s => s.trim()).includes(filterMinistry)
-      const matchAssignee = !filterAssignee || (t.assignee ?? '').split(',').map(s => s.trim()).includes(filterAssignee)
+
+      // Ministry: task's comma-separated list must overlap with selected set
+      const taskMinistries = (t.ministry ?? '').split(',').map(s => s.trim()).filter(Boolean)
+      const matchMinistry = filterMinistries.length === 0
+        || filterMinistries.some(m => taskMinistries.includes(m))
+
+      // Assignee: task's comma-separated list must overlap with selected set
+      const taskAssignees = (t.assignee ?? '').split(',').map(s => s.trim()).filter(Boolean)
+      const matchAssignee = filterAssignees.length === 0
+        || filterAssignees.some(a => taskAssignees.includes(a))
+
       const matchStatus = !filterStatus || t.status === filterStatus
       const matchSearch = !searchTerm || t.name.toLowerCase().includes(searchTerm.toLowerCase())
+
       return matchEvent && matchMinistry && matchAssignee && matchStatus && matchSearch
     })
-  }, [tasks, filterEvent, filterMinistry, filterAssignee, filterStatus, searchTerm])
+  }, [tasks, filterEvent, filterMinistries, filterAssignees, filterStatus, searchTerm])
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
   const paginatedTasks = useMemo(() => {
@@ -52,18 +159,20 @@ export default function App() {
     return filtered.slice(start, start + ITEMS_PER_PAGE)
   }, [filtered, currentPage, view])
 
-  useEffect(() => { setCurrentPage(1) }, [filterEvent, filterMinistry, filterAssignee, filterStatus, searchTerm])
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterEvent, filterMinistries, filterAssignees, filterStatus, searchTerm])
 
   function openAdd() { setEditTask(null); setModalOpen(true) }
   function openEdit(task) { setEditTask(task); setModalOpen(true) }
   function closeModal() { setModalOpen(false); setEditTask(null) }
 
-  const hasFilters = filterEvent || filterMinistry || filterAssignee || filterStatus || searchTerm
+  const hasFilters = filterEvent || filterMinistries.length || filterAssignees.length || filterStatus || searchTerm
 
   function clearFilters() {
     setFilterEvent('')
-    setFilterMinistry('')
-    setFilterAssignee('')
+    setFilterMinistries([])
+    setFilterAssignees([])
     setFilterStatus('')
     setSearchTerm('')
   }
@@ -89,7 +198,6 @@ export default function App() {
 
       {/* ── Row 2: View tabs + Manage buttons ── */}
       <div className="bg-blue-700 px-6 flex items-center justify-between">
-        {/* View tabs */}
         <nav className="flex">
           {VIEWS.map(v => (
             <button
@@ -105,7 +213,6 @@ export default function App() {
           ))}
         </nav>
 
-        {/* Manage buttons */}
         <div className="flex items-center gap-1 py-1.5">
           <span className="text-blue-400 text-xs mr-1 hidden sm:inline">Manage:</span>
           {[
@@ -125,7 +232,8 @@ export default function App() {
       </div>
 
       {/* ── Row 3: Filter bar ── */}
-      <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center gap-3 flex-wrap">
+      <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center gap-2 flex-wrap">
+
         {/* Search */}
         <div className="relative">
           <input
@@ -142,7 +250,7 @@ export default function App() {
 
         <div className="w-px h-5 bg-slate-200" />
 
-        {/* Event filter */}
+        {/* Event — single select (events are not multi-valued on tasks) */}
         <select
           value={filterEvent}
           onChange={e => setFilterEvent(e.target.value)}
@@ -152,27 +260,25 @@ export default function App() {
           {events.map(ev => <option key={ev} value={ev}>{ev}</option>)}
         </select>
 
-        {/* Ministry filter */}
-        <select
-          value={filterMinistry}
-          onChange={e => setFilterMinistry(e.target.value)}
-          className="rounded-lg px-2.5 py-1.5 text-sm text-slate-600 bg-slate-100 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All Ministries</option>
-          {ministries.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
-        </select>
+        {/* Ministry — multi-select */}
+        <MultiSelectFilter
+          label="Ministries"
+          options={ministries}
+          selected={filterMinistries}
+          onChange={setFilterMinistries}
+          colorCls="bg-purple-600"
+        />
 
-        {/* Assignee filter */}
-        <select
-          value={filterAssignee}
-          onChange={e => setFilterAssignee(e.target.value)}
-          className="rounded-lg px-2.5 py-1.5 text-sm text-slate-600 bg-slate-100 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        >
-          <option value="">All People</option>
-          {assignees.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-        </select>
+        {/* People — multi-select */}
+        <MultiSelectFilter
+          label="People"
+          options={assignees}
+          selected={filterAssignees}
+          onChange={setFilterAssignees}
+          colorCls="bg-green-600"
+        />
 
-        {/* Status filter */}
+        {/* Status — single select */}
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
@@ -185,21 +291,47 @@ export default function App() {
           <option value="blocked">Blocked</option>
         </select>
 
+        {/* Active filter chips + clear */}
         {hasFilters && (
           <>
             <div className="w-px h-5 bg-slate-200" />
-            <div className="flex items-center gap-2 flex-wrap">
-              {filterEvent && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Event: {filterEvent}</span>}
-              {filterMinistry && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Ministry: {filterMinistry}</span>}
-              {filterAssignee && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Person: {filterAssignee}</span>}
-              {filterStatus && <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full capitalize">{filterStatus.replace('_', ' ')}</span>}
-              {searchTerm && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">"{searchTerm}"</span>}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {filterEvent && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  Event: {filterEvent}
+                  <button onClick={() => setFilterEvent('')} className="text-blue-400 hover:text-blue-700">×</button>
+                </span>
+              )}
+              {filterMinistries.map(m => (
+                <span key={m} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  {m}
+                  <button onClick={() => setFilterMinistries(prev => prev.filter(x => x !== m))} className="text-purple-400 hover:text-purple-700">×</button>
+                </span>
+              ))}
+              {filterAssignees.map(a => (
+                <span key={a} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  {a}
+                  <button onClick={() => setFilterAssignees(prev => prev.filter(x => x !== a))} className="text-green-400 hover:text-green-700">×</button>
+                </span>
+              ))}
+              {filterStatus && (
+                <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full flex items-center gap-1 capitalize">
+                  {filterStatus.replace('_', ' ')}
+                  <button onClick={() => setFilterStatus('')} className="text-slate-400 hover:text-slate-700">×</button>
+                </span>
+              )}
+              {searchTerm && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  "{searchTerm}"
+                  <button onClick={() => setSearchTerm('')} className="text-amber-400 hover:text-amber-700">×</button>
+                </span>
+              )}
               <span className="text-xs text-slate-400">{filtered.length} tasks</span>
               <button
                 onClick={clearFilters}
-                className="text-xs text-slate-500 hover:text-red-500 font-medium underline underline-offset-2"
+                className="text-xs text-slate-500 hover:text-red-500 font-medium underline underline-offset-2 ml-1"
               >
-                Clear
+                Clear all
               </button>
             </div>
           </>
@@ -215,7 +347,6 @@ export default function App() {
             {view === 'List' && (
               <>
                 <ListView tasks={paginatedTasks} onEdit={openEdit} />
-
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-slate-200">
                     <p className="text-sm text-slate-500">
