@@ -9,6 +9,7 @@ import TaskModal from './components/TaskModal'
 import AssigneeModal from './components/AssigneeModal'
 import EventModal from './components/EventModal'
 import MinistryModal from './components/MinistryModal'
+import AIAssistant from './components/AIAssistant'
 
 const VIEWS = ['List', 'Kanban', 'Calendar', 'Report', 'Program']
 const ITEMS_PER_PAGE = 15
@@ -393,6 +394,8 @@ export default function App() {
       {assigneeModalOpen && <AssigneeModal onClose={() => setAssigneeModalOpen(false)} />}
       {eventModalOpen && <EventModal onClose={() => setEventModalOpen(false)} />}
       {ministryModalOpen && <MinistryModal onClose={() => setMinistryModalOpen(false)} />}
+
+      <AIAssistant />
     </div>
   )
 }
