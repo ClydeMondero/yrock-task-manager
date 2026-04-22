@@ -175,32 +175,36 @@ export default function ReportView({ tasks }) {
       <div className="flex items-center gap-3 flex-wrap bg-white border border-slate-200 rounded-xl px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-500">Group by:</span>
-          {GROUP_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setGroupBy(opt.value)}
-              className={`text-xs px-3 py-1 rounded-full font-medium transition-colors
-                ${groupBy === opt.value ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-            >
-              {opt.label}
-            </button>
-          ))}
+          <div className="flex bg-slate-100 p-1 rounded-lg">
+            {GROUP_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setGroupBy(opt.value)}
+                className={`text-xs px-3 py-1 rounded-md font-semibold transition-all
+                  ${groupBy === opt.value ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="w-px h-5 bg-slate-200" />
+        <div className="w-px h-5 bg-slate-200 mx-1" />
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-500">Show:</span>
-          {STATUS_FILTER_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setStatusFilter(opt.value)}
-              className={`text-xs px-3 py-1 rounded-full font-medium transition-colors
-                ${statusFilter === opt.value ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-            >
-              {opt.label}
-            </button>
-          ))}
+          <div className="flex bg-slate-100 p-1 rounded-lg">
+            {STATUS_FILTER_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setStatusFilter(opt.value)}
+                className={`text-xs px-3 py-1 rounded-md font-semibold transition-all
+                  ${statusFilter === opt.value ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="ml-auto">

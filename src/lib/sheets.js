@@ -91,12 +91,13 @@ export async function getTasks() {
 
 export async function getAssignees() {
   try {
-    const data = await sheetsRequest('GET', `/values/Assignees!A2:C`)
+    const data = await sheetsRequest('GET', `/values/Assignees!A2:D`)
     const rows = data.values ?? []
     return rows.map(row => ({
-      id: row[0],
-      name: row[1],
-      telegram_id: row[2]
+      id:          row[0] ?? '',
+      name:        row[1] ?? '',
+      telegram_id: row[2] ?? '',
+      ministry:    row[3] ?? '',   // which ministry this person belongs to
     })).filter(a => a.id)
   } catch (e) {
     console.error("Failed to fetch assignees", e)
@@ -123,7 +124,7 @@ export async function getEvents() {
 
 export async function addAssignee(person) {
   await sheetsRequest('POST', `/values/Assignees!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
-    values: [[person.id, person.name, person.telegram_id]],
+    values: [[person.id, person.name, person.telegram_id ?? '', person.ministry ?? '']],
   })
 }
 
@@ -150,6 +151,55 @@ export async function getMinistries() {
 export async function addMinistry(ministry) {
   await sheetsRequest('POST', `/values/Ministries!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
     values: [[ministry.id, ministry.name]],
+  })
+}
+
+// ── Program Flow ─────────────────────────────────────────────────────────────
+const FLOW_COLS = ['id', 'event', 'date', 'title', 'start_time', 'end_time', 'assignee', 'color', 'notes']
+
+function rowToBlock(row, i) {
+  const b = { _row: i + 2 }
+  FLOW_COLS.forEach((col, j) => { b[col] = row[j] ?? '' })
+  return b
+}
+
+function blockToRow(b) {
+  return FLOW_COLS.map(col => b[col] ?? '')
+}
+
+export async function getProgramFlow() {
+  try {
+    const data = await sheetsRequest('GET', `/values/ProgramFlow!A2:I`)
+    const rows = data.values ?? []
+    return rows.map((row, i) => rowToBlock(row, i)).filter(b => b.id)
+  } catch (e) {
+    console.error('Failed to fetch program flow', e)
+    return []
+  }
+}
+
+export async function addBlock(block) {
+  await sheetsRequest('POST', `/values/ProgramFlow!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    values: [blockToRow(block)],
+  })
+}
+
+export async function updateBlock(id, fields) {
+  const blocks = await getProgramFlow()
+  const block  = blocks.find(b => b.id === id)
+  if (!block) throw new Error(`Block ${id} not found`)
+  const updated = { ...block, ...fields }
+  await sheetsRequest('PUT', `/values/ProgramFlow!A${block._row}:I${block._row}?valueInputOption=RAW`, {
+    values: [blockToRow(updated)],
+  })
+}
+
+export async function deleteBlock(id) {
+  const blocks = await getProgramFlow()
+  const block  = blocks.find(b => b.id === id)
+  if (!block) return
+  await sheetsRequest('PUT', `/values/ProgramFlow!A${block._row}:I${block._row}?valueInputOption=RAW`, {
+    values: [['', '', '', '', '', '', '', '', '']],
   })
 }
 

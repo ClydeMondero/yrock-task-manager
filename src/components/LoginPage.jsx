@@ -42,7 +42,7 @@ export default function LoginPage({ onAuth }) {
 
         {/* Card */}
         <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-8 py-8 w-full shadow-xl">
-          <h1 className="text-white text-center text-lg font-semibold mb-1">Task Manager</h1>
+          <h1 className="text-white text-center text-lg font-semibold mb-1">Operations Hub</h1>
           <p className="text-blue-200 text-center text-xs mb-6">Yeshua The Rock Christian Assembly</p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

@@ -5,6 +5,151 @@ import AssigneeModal from './AssigneeModal'
 import EventModal from './EventModal'
 import MinistryModal from './MinistryModal'
 
+// ── Grouped assignee picker ───────────────────────────────────────────────────
+function AssigneePicker({ assignees, ministries, selected, onChange, onAddNew }) {
+  function isSelected(id) { return !!selected.find(s => s.id === id) }
+
+  function toggle(entry) {
+    onChange(prev => {
+      const exists = prev.find(s => s.id === entry.id)
+      return exists ? prev.filter(s => s.id !== entry.id) : [...prev, entry]
+    })
+  }
+
+  // Group people by ministry name, ungrouped at bottom
+  const grouped = ministries.map(m => ({
+    ministry: m,
+    people: assignees.filter(a => a.ministry === m.name),
+  })).filter(g => g.people.length > 0)
+  const ungrouped = assignees.filter(a => !a.ministry || !ministries.find(m => m.name === a.ministry))
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-slate-600">Assign To</span>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => {
+            const all = [
+              ...ministries.map(m => ({ id: m.id, name: m.name, _type: 'ministry' })),
+              ...assignees.map(a => ({ ...a, _type: 'person' })),
+            ]
+            onChange(all)
+          }} className="text-[10px] text-blue-600 hover:text-blue-800 font-bold uppercase tracking-wider">
+            All
+          </button>
+          {selected.length > 0 && (
+            <button type="button" onClick={() => onChange([])}
+              className="text-[10px] text-red-400 hover:text-red-600 font-bold uppercase tracking-wider">
+              Clear
+            </button>
+          )}
+          <button type="button" onClick={onAddNew}
+            className="text-[10px] text-blue-600 hover:text-blue-800 font-bold uppercase tracking-wider">
+            + Add
+          </button>
+        </div>
+      </div>
+
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-1">
+          {selected.map(a => (
+            <span key={a.id}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                ${a._type === 'ministry'
+                  ? 'bg-purple-100 text-purple-700'
+                  : 'bg-blue-100 text-blue-700'}`}>
+              {a._type === 'ministry' && <span className="opacity-60">🏛</span>}
+              {a.name}
+              <button type="button" onClick={() => onChange(p => p.filter(s => s.id !== a.id))}
+                className="opacity-50 hover:opacity-100 leading-none">×</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="border border-slate-300 rounded max-h-48 overflow-y-auto">
+        {assignees.length === 0 && ministries.length === 0 && (
+          <p className="text-xs text-slate-400 px-3 py-2">No people yet — add one above</p>
+        )}
+
+        {/* Ministry-level rows */}
+        {ministries.length > 0 && (
+          <>
+            <div className="px-3 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
+              Ministries
+            </div>
+            {ministries.map(m => {
+              const entry = { id: m.id, name: m.name, _type: 'ministry' }
+              const sel = isSelected(m.id)
+              return (
+                <button key={m.id} type="button" onClick={() => toggle(entry)}
+                  className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-slate-50 transition-colors ${sel ? 'bg-purple-50' : ''}`}>
+                  <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 text-[10px]
+                    ${sel ? 'bg-purple-600 border-purple-600 text-white' : 'border-slate-300'}`}>
+                    {sel ? '✓' : ''}
+                  </span>
+                  <span className={`${sel ? 'text-purple-700 font-medium' : 'text-slate-700'}`}>🏛 {m.name}</span>
+                </button>
+              )
+            })}
+          </>
+        )}
+
+        {/* People grouped by ministry */}
+        {grouped.map(({ ministry: m, people }) => (
+          <div key={m.id}>
+            <div className="px-3 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-y border-slate-100">
+              {m.name}
+            </div>
+            {people.map(a => {
+              const entry = { ...a, _type: 'person' }
+              const sel = isSelected(a.id)
+              return (
+                <button key={a.id} type="button" onClick={() => toggle(entry)}
+                  className={`w-full text-left px-3 py-1.5 pl-5 text-sm flex items-center gap-2 hover:bg-slate-50 transition-colors ${sel ? 'bg-blue-50' : ''}`}>
+                  <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 text-[10px]
+                    ${sel ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'}`}>
+                    {sel ? '✓' : ''}
+                  </span>
+                  <span className={sel ? 'text-blue-700 font-medium' : 'text-slate-700'}>{a.name}</span>
+                  {a.telegram_id && <span className="ml-auto text-[10px] text-slate-400">TG</span>}
+                </button>
+              )
+            })}
+          </div>
+        ))}
+
+        {/* Ungrouped people */}
+        {ungrouped.length > 0 && (
+          <>
+            {(grouped.length > 0 || ministries.length > 0) && (
+              <div className="px-3 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 border-y border-slate-100">
+                Other
+              </div>
+            )}
+            {ungrouped.map(a => {
+              const entry = { ...a, _type: 'person' }
+              const sel = isSelected(a.id)
+              return (
+                <button key={a.id} type="button" onClick={() => toggle(entry)}
+                  className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-slate-50 transition-colors ${sel ? 'bg-blue-50' : ''}`}>
+                  <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 text-[10px]
+                    ${sel ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'}`}>
+                    {sel ? '✓' : ''}
+                  </span>
+                  <span className={sel ? 'text-blue-700 font-medium' : 'text-slate-700'}>{a.name}</span>
+                  {a.telegram_id && <span className="ml-auto text-[10px] text-slate-400">TG</span>}
+                </button>
+              )
+            })}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const STATUSES = ['todo', 'in_progress', 'done', 'blocked']
 const PRIORITIES = ['high', 'medium', 'low']
 const REMINDERS = ['none', '1d', '2h', '30m', 'ondue']
@@ -30,12 +175,16 @@ export default function TaskModal({ task, onClose }) {
     gdrive_link: task?.gdrive_link ?? '',
   })
 
-  // Multi-assignee state
+  // Unified assignee state — holds both people and ministry-level entries
+  // Shape: { id, name, _type: 'person' | 'ministry' }
   const [selectedAssignees, setSelectedAssignees] = useState(() => {
     if (!task?.assignee) return []
     return parseNames(task.assignee).map(name => {
-      const found = assignees.find(a => a.name === name)
-      return found ?? { id: name, name, telegram_id: '' }
+      const person = assignees.find(a => a.name === name)
+      if (person) return { ...person, _type: 'person' }
+      const ministry = ministries.find(m => m.name === name)
+      if (ministry) return { ...ministry, _type: 'ministry' }
+      return { id: name, name, _type: 'person' }
     })
   })
 
@@ -55,17 +204,6 @@ export default function TaskModal({ task, onClose }) {
   const [showAddMinistry, setShowAddMinistry] = useState(false)
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
-
-  function toggleAssignee(person) {
-    setSelectedAssignees(prev => {
-      const exists = prev.find(a => a.id === person.id)
-      return exists ? prev.filter(a => a.id !== person.id) : [...prev, person]
-    })
-  }
-
-  function removeAssignee(personId) {
-    setSelectedAssignees(prev => prev.filter(a => a.id !== personId))
-  }
 
   function toggleMinistry(m) {
     setSelectedMinistries(prev => {
@@ -283,67 +421,13 @@ export default function TaskModal({ task, onClose }) {
               </select>
             </label>
 
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-600">Assign To</span>
-                <button
-                  type="button"
-                  onClick={() => setShowAddAssignee(true)}
-                  className="text-[10px] text-blue-600 hover:text-blue-800 font-bold uppercase tracking-wider"
-                >
-                  + Add New
-                </button>
-              </div>
-
-              {/* Selected chips */}
-              {selectedAssignees.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-1">
-                  {selectedAssignees.map(a => (
-                    <span
-                      key={a.id}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
-                    >
-                      {a.name}
-                      <button
-                        type="button"
-                        onClick={() => removeAssignee(a.id)}
-                        className="text-blue-400 hover:text-blue-700 leading-none"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Assignee toggle list */}
-              <div className="border border-slate-300 rounded max-h-36 overflow-y-auto">
-                {assignees.length === 0 && (
-                  <p className="text-xs text-slate-400 px-3 py-2">No assignees yet — add one above</p>
-                )}
-                {assignees.map(a => {
-                  const selected = !!selectedAssignees.find(s => s.id === a.id)
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => toggleAssignee(a)}
-                      className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-slate-50 transition-colors
-                        ${selected ? 'bg-blue-50' : ''}`}
-                    >
-                      <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 text-[10px]
-                        ${selected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'}`}>
-                        {selected ? '✓' : ''}
-                      </span>
-                      <span className={selected ? 'text-blue-700 font-medium' : 'text-slate-700'}>{a.name}</span>
-                      {a.telegram_id && (
-                        <span className="ml-auto text-xs text-slate-400">TG ✓</span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <AssigneePicker
+              assignees={assignees}
+              ministries={ministries}
+              selected={selectedAssignees}
+              onChange={setSelectedAssignees}
+              onAddNew={() => setShowAddAssignee(true)}
+            />
 
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-slate-600">Remarks</span>

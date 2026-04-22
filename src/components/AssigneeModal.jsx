@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useTasks } from '../context/TaskContext'
 
 export default function AssigneeModal({ onClose }) {
-  const { addAssignee } = useTasks()
-  const [form, setForm] = useState({ name: '', telegram_id: '' })
+  const { addAssignee, ministries } = useTasks()
+  const [form, setForm] = useState({ name: '', telegram_id: '', ministry: '' })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+
+  function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -24,7 +26,7 @@ export default function AssigneeModal({ onClose }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-800">Add New Assignee</h2>
+          <h2 className="font-semibold text-slate-800">Add New Person</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
         </div>
 
@@ -36,17 +38,32 @@ export default function AssigneeModal({ onClose }) {
             <input
               autoFocus
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              onChange={e => set('name', e.target.value)}
               className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               placeholder="e.g. Clyde"
             />
           </label>
 
           <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-600">Ministry</span>
+            <select
+              value={form.ministry}
+              onChange={e => set('ministry', e.target.value)}
+              className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="">No Ministry</option>
+              {ministries.map(m => (
+                <option key={m.id} value={m.name}>{m.name}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-slate-400">Groups this person under a ministry in the assignee picker.</p>
+          </label>
+
+          <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-slate-600">Telegram Chat ID</span>
             <input
               value={form.telegram_id}
-              onChange={e => setForm(f => ({ ...f, telegram_id: e.target.value }))}
+              onChange={e => set('telegram_id', e.target.value)}
               className="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               placeholder="e.g. 8615625470"
             />

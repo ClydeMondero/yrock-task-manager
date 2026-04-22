@@ -4,12 +4,13 @@ import ListView from './components/ListView'
 import KanbanView from './components/KanbanView'
 import CalendarView from './components/CalendarView'
 import ReportView from './components/ReportView'
+import ProgramFlowView from './components/ProgramFlowView'
 import TaskModal from './components/TaskModal'
 import AssigneeModal from './components/AssigneeModal'
 import EventModal from './components/EventModal'
 import MinistryModal from './components/MinistryModal'
 
-const VIEWS = ['List', 'Kanban', 'Calendar', 'Report']
+const VIEWS = ['List', 'Kanban', 'Calendar', 'Report', 'Program']
 const ITEMS_PER_PAGE = 15
 
 // ── Multi-select dropdown filter ─────────────────────────────────────────────
@@ -183,10 +184,10 @@ export default function App() {
       {/* ── Row 1: Brand + primary action ── */}
       <div className="bg-blue-600 px-6 py-3 flex items-center justify-between">
         <div>
-          <h1 className="text-white font-bold text-base leading-tight">YROCK Task Manager</h1>
+          <h1 className="text-white font-bold text-base leading-tight">YROCK Ops Hub</h1>
           <p className="text-blue-200 text-xs">Bustos &amp; Baliuag</p>
         </div>
-        {view !== 'Report' && (
+        {view !== 'Report' && view !== 'Program' && (
           <button
             onClick={openAdd}
             className="bg-white hover:bg-blue-50 text-blue-600 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
@@ -382,7 +383,8 @@ export default function App() {
             )}
             {view === 'Kanban' && <KanbanView tasks={filtered} onEdit={openEdit} />}
             {view === 'Calendar' && <CalendarView tasks={filtered} events={managedEvents} onEdit={openEdit} />}
-            {view === 'Report' && <ReportView tasks={filtered} />}
+            {view === 'Report'  && <ReportView tasks={filtered} />}
+            {view === 'Program' && <ProgramFlowView />}
           </div>
         )}
       </main>

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTasks } from '../context/TaskContext'
 import { isPast, parseISO } from 'date-fns'
 import { StatusBadge, PriorityBadge } from './Badges'
+import ScreenshotButton from './ScreenshotButton'
 
 const COLS = [
   { key: 'name', label: 'Name' },
@@ -19,6 +20,7 @@ export default function ListView({ tasks, onEdit }) {
   const { deleteTask } = useTasks()
   const [sortKey, setSortKey] = useState('due_date')
   const [sortDir, setSortDir] = useState('asc')
+  const listRef = useRef(null)
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -38,8 +40,12 @@ export default function ListView({ tasks, onEdit }) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <ScreenshotButton targetRef={listRef} label="TaskList" />
+      </div>
+      <div ref={listRef} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -146,5 +152,6 @@ export default function ListView({ tasks, onEdit }) {
         </table>
       </div>
     </div>
+  </div>
   )
 }
