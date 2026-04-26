@@ -5,13 +5,14 @@ import KanbanView from './components/KanbanView'
 import CalendarView from './components/CalendarView'
 import ReportView from './components/ReportView'
 import ProgramFlowView from './components/ProgramFlowView'
+import LifegroupsView from './components/LifegroupsView'
 import TaskModal from './components/TaskModal'
 import AssigneeModal from './components/AssigneeModal'
 import EventModal from './components/EventModal'
 import MinistryModal from './components/MinistryModal'
 import AIAssistant from './components/AIAssistant'
 
-const VIEWS = ['List', 'Kanban', 'Calendar', 'Report', 'Program']
+const VIEWS = ['List', 'Kanban', 'Calendar', 'Report', 'Program', 'Lifegroups']
 const ITEMS_PER_PAGE = 15
 
 // ── Multi-select dropdown filter ─────────────────────────────────────────────
@@ -188,7 +189,7 @@ export default function App() {
           <h1 className="text-white font-bold text-base leading-tight">YROCK Ops Hub</h1>
           <p className="text-blue-200 text-xs">Bustos &amp; Baliuag</p>
         </div>
-        {view !== 'Report' && view !== 'Program' && (
+        {view !== 'Report' && view !== 'Program' && view !== 'Lifegroups' && (
           <button
             onClick={openAdd}
             className="bg-white hover:bg-blue-50 text-blue-600 text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
@@ -233,8 +234,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── Row 3: Filter bar ── */}
-      <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center gap-2 flex-wrap">
+      {/* ── Row 3: Filter bar (hidden on Lifegroups view) ── */}
+      <div className={`bg-white border-b border-slate-200 px-6 py-2.5 flex items-center gap-2 flex-wrap ${view === 'Lifegroups' ? 'hidden' : ''}`}>
 
         {/* Search */}
         <div className="relative">
@@ -342,9 +343,12 @@ export default function App() {
 
       {/* ── Main content ── */}
       <main className="p-6">
-        {loading && <p className="text-slate-500 text-sm">Loading tasks…</p>}
-        {error && <p className="text-red-500 text-sm">Error: {error}</p>}
-        {!loading && !error && (
+        {/* Lifegroups view has its own data loading — render independently */}
+        {view === 'Lifegroups' && <LifegroupsView />}
+
+        {view !== 'Lifegroups' && loading && <p className="text-slate-500 text-sm">Loading tasks…</p>}
+        {view !== 'Lifegroups' && error && <p className="text-red-500 text-sm">Error: {error}</p>}
+        {view !== 'Lifegroups' && !loading && !error && (
           <div className="flex flex-col gap-6">
             {view === 'List' && (
               <>

@@ -227,3 +227,104 @@ export async function deleteTask(id) {
     values: [['', '', '', '', '', '', '', '', '', '', '', '', '', '']],
   })
 }
+
+// ── Lifegroups ────────────────────────────────────────────────────────────────
+
+const LG_GROUP_COLS   = ['id', 'name', 'leader', 'password_hash']
+const LG_MEMBER_COLS  = ['id', 'name', 'lifegroup_id', 'contact', 'notes']
+const LG_MEETING_COLS = ['id', 'lifegroup_id', 'date', 'attendees', 'notes']
+
+function rowToLGGroup(row, i)   { const g = { _row: i + 2 }; LG_GROUP_COLS.forEach((c, j)   => { g[c] = row[j] ?? '' }); return g }
+function rowToLGMember(row, i)  { const m = { _row: i + 2 }; LG_MEMBER_COLS.forEach((c, j)  => { m[c] = row[j] ?? '' }); return m }
+function rowToLGMeeting(row, i) { const m = { _row: i + 2 }; LG_MEETING_COLS.forEach((c, j) => { m[c] = row[j] ?? '' }); return m }
+
+function lgGroupToRow(g)   { return LG_GROUP_COLS.map(c   => g[c] ?? '') }
+function lgMemberToRow(m)  { return LG_MEMBER_COLS.map(c  => m[c] ?? '') }
+function lgMeetingToRow(m) { return LG_MEETING_COLS.map(c => m[c] ?? '') }
+
+// ── LGGroups ──────────────────────────────────────────────────────────────────
+export async function getLGGroups() {
+  try {
+    const data = await sheetsRequest('GET', `/values/LGGroups!A2:D`)
+    return (data.values ?? []).map((r, i) => rowToLGGroup(r, i)).filter(g => g.id)
+  } catch (e) { console.error('getLGGroups', e); return [] }
+}
+export async function addLGGroup(group) {
+  await sheetsRequest('POST', `/values/LGGroups!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    values: [lgGroupToRow(group)],
+  })
+}
+export async function updateLGGroup(id, fields) {
+  const all = await getLGGroups()
+  const g   = all.find(x => x.id === id)
+  if (!g) throw new Error(`LGGroup ${id} not found`)
+  await sheetsRequest('PUT', `/values/LGGroups!A${g._row}:D${g._row}?valueInputOption=RAW`, {
+    values: [lgGroupToRow({ ...g, ...fields })],
+  })
+}
+export async function deleteLGGroup(id) {
+  const all = await getLGGroups()
+  const g   = all.find(x => x.id === id)
+  if (!g) return
+  await sheetsRequest('PUT', `/values/LGGroups!A${g._row}:D${g._row}?valueInputOption=RAW`, {
+    values: [['', '', '', '']],
+  })
+}
+
+// ── LGMembers ─────────────────────────────────────────────────────────────────
+export async function getLGMembers() {
+  try {
+    const data = await sheetsRequest('GET', `/values/LGMembers!A2:E`)
+    return (data.values ?? []).map((r, i) => rowToLGMember(r, i)).filter(m => m.id)
+  } catch (e) { console.error('getLGMembers', e); return [] }
+}
+export async function addLGMember(member) {
+  await sheetsRequest('POST', `/values/LGMembers!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    values: [lgMemberToRow(member)],
+  })
+}
+export async function updateLGMember(id, fields) {
+  const all = await getLGMembers()
+  const m   = all.find(x => x.id === id)
+  if (!m) throw new Error(`LGMember ${id} not found`)
+  await sheetsRequest('PUT', `/values/LGMembers!A${m._row}:E${m._row}?valueInputOption=RAW`, {
+    values: [lgMemberToRow({ ...m, ...fields })],
+  })
+}
+export async function deleteLGMember(id) {
+  const all = await getLGMembers()
+  const m   = all.find(x => x.id === id)
+  if (!m) return
+  await sheetsRequest('PUT', `/values/LGMembers!A${m._row}:E${m._row}?valueInputOption=RAW`, {
+    values: [['', '', '', '', '']],
+  })
+}
+
+// ── LGMeetings ────────────────────────────────────────────────────────────────
+export async function getLGMeetings() {
+  try {
+    const data = await sheetsRequest('GET', `/values/LGMeetings!A2:E`)
+    return (data.values ?? []).map((r, i) => rowToLGMeeting(r, i)).filter(m => m.id)
+  } catch (e) { console.error('getLGMeetings', e); return [] }
+}
+export async function addLGMeeting(meeting) {
+  await sheetsRequest('POST', `/values/LGMeetings!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    values: [lgMeetingToRow(meeting)],
+  })
+}
+export async function updateLGMeeting(id, fields) {
+  const all = await getLGMeetings()
+  const m   = all.find(x => x.id === id)
+  if (!m) throw new Error(`LGMeeting ${id} not found`)
+  await sheetsRequest('PUT', `/values/LGMeetings!A${m._row}:E${m._row}?valueInputOption=RAW`, {
+    values: [lgMeetingToRow({ ...m, ...fields })],
+  })
+}
+export async function deleteLGMeeting(id) {
+  const all = await getLGMeetings()
+  const m   = all.find(x => x.id === id)
+  if (!m) return
+  await sheetsRequest('PUT', `/values/LGMeetings!A${m._row}:E${m._row}?valueInputOption=RAW`, {
+    values: [['', '', '', '', '']],
+  })
+}
